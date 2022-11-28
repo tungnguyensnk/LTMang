@@ -1,34 +1,47 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <malloc.h>
 #include <string.h>
+#include <netinet/in.h>
 #include <sys/socket.h>
-#include <netdb.h>
-#include <arpa/inet.h>
+#include <sys/types.h>
+#include <pthread.h>
 #include <unistd.h>
+#include <malloc.h>
 
-typedef struct sockaddr_in SOCKADDR_IN;
-typedef struct sockaddr SOCKADDR;
-int main()
-{
-    int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    SOCKADDR_IN saddr, ackaddr;
-    ackaddr.sin_family = AF_INET;
-    ackaddr.sin_port = htons(6000);
-    ackaddr.sin_addr.s_addr = 0;
-    bind(s, (SOCKADDR*)&ackaddr, sizeof(ackaddr));
+int step = 0, total = 0, n;
 
-    saddr.sin_family = AF_INET;
-    saddr.sin_port = htons(5000);
-    saddr.sin_addr.s_addr = inet_addr("172.30.236.220");
-    while (1)
-    {
-        char buffer[1024] = { 0 };
-        fgets(buffer, sizeof(buffer), stdin);
-        int sent = sendto(s, buffer, strlen(buffer), 0, (SOCKADDR*)&saddr, sizeof(saddr));
-        char ack[1024] = { 0 };
-        recvfrom(s, ack, sizeof(ack), 0, NULL, NULL);
-        printf("ACK: %s\n", ack);
+void *my_func(void *arg) {
+    int i = *(int *) arg;
+    printf("Thread %d: ", i + 1);
+    for (int j = 1; j <= step; ++j) {
+        total += j + i * step;
+        printf("%d ", j + i * step);
     }
-    close(s);
+    if (i + 1 == n) {
+        for (int j = 2; j < (i + 1) * step; ++j) {
+            printf("%d ", j + i * step);
+            total += j + i * step;
+        }
+    }
+    printf("\n");
+    return NULL;
+}
+
+int main() {
+    int k;
+    printf("Enter n: ");
+    scanf("%d", &n);
+    printf("Enter k: ");
+    scanf("%d", &k);
+    step = k / n;
+
+    pthread_t thread[n];
+    for (int i = 0; i < n; ++i) {
+        int *arg = malloc(sizeof(int));
+        *arg = i;
+        pthread_create(&thread[i], NULL, my_func, arg);
+    }
+    for (int i = 0; i < n; ++i) {
+        pthread_join(thread[i], NULL);
+    }
+    printf("Total: %d\n", total);
 }
