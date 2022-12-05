@@ -1,47 +1,69 @@
 #include <stdio.h>
-#include <string.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <sys/types.h>
-#include <pthread.h>
 #include <unistd.h>
-#include <malloc.h>
+#include <string.h>
+#include <stdlib.h>
+#include <pthread.h>
 
-int step = 0, total = 0, n;
+#define FAIL -1
+typedef struct sockaddr_in SOCKADDR_IN;
+typedef struct sockaddr SOCKADDR;
+pthread_mutex_t *mutex = NULL;
 
-void *my_func(void *arg) {
-    int i = *(int *) arg;
-    printf("Thread %d: ", i + 1);
-    for (int j = 1; j <= step; ++j) {
-        total += j + i * step;
-        printf("%d ", j + i * step);
-    }
-    if (i + 1 == n) {
-        for (int j = 2; j < (i + 1) * step; ++j) {
-            printf("%d ", j + i * step);
-            total += j + i * step;
+void *handle(void *arg) {
+    int cfd = *(int *) arg;
+    char *welcome = "Welcome to TCP server\nType a command\n";
+    send(cfd, welcome, strlen(welcome), 0);
+
+    while (1) {
+        char buffer[1024] = {0};
+        recv(cfd, buffer, sizeof buffer, 0);
+        if (buffer[strlen(buffer) - 1] == '\n')
+            buffer[strlen(buffer) - 1] = 0;
+        sprintf(buffer + strlen(buffer), " > out.txt");
+        pthread_mutex_lock(mutex);
+        system(buffer);
+
+        FILE *taptin = NULL;
+        taptin = fopen("out.txt", "r");
+        if (taptin != NULL) {
+            char line[500] = "";
+            fgets(line, sizeof(line), taptin);
+            while (!feof(taptin)) {
+                fgets(line, sizeof(line), taptin);
+                send(cfd, line, strlen(line), 0);
+            }
         }
+        fclose(taptin);
+        pthread_mutex_unlock(mutex);
+        if (strncmp(buffer, "exit", 4) == 0)
+            break;
     }
-    printf("\n");
-    return NULL;
 }
 
 int main() {
-    int k;
-    printf("Enter n: ");
-    scanf("%d", &n);
-    printf("Enter k: ");
-    scanf("%d", &k);
-    step = k / n;
+    mutex = (pthread_mutex_t*)calloc(1, sizeof(pthread_mutex_t));
+    pthread_mutex_init(mutex, NULL);
+    int sfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-    pthread_t thread[n];
-    for (int i = 0; i < n; ++i) {
-        int *arg = malloc(sizeof(int));
-        *arg = i;
-        pthread_create(&thread[i], NULL, my_func, arg);
+    SOCKADDR_IN saddr, caddr;
+    int clen = sizeof(caddr);
+
+    saddr.sin_family = AF_INET;
+    saddr.sin_port = htons(9999);
+    saddr.sin_addr.s_addr = 0;
+
+    int error = bind(sfd, (SOCKADDR *) &saddr, sizeof saddr);
+    if (error == -1)
+        abort();
+
+    listen(sfd, 10);
+    while (0 == 0) {
+        int cfd = accept(sfd, (SOCKADDR *) &caddr, (unsigned int *) &clen);
+        if (cfd != FAIL) {
+            pthread_t thread;
+            pthread_create(&thread, NULL, &handle, &cfd);
+        }
     }
-    for (int i = 0; i < n; ++i) {
-        pthread_join(thread[i], NULL);
-    }
-    printf("Total: %d\n", total);
 }
