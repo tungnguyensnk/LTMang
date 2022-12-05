@@ -84,7 +84,7 @@ void *ClientThread(void *arg) {
         else
             sprintf(type, "application/octet-stream");
         char command[1024] = {0};
-        sprintf(command, "cp %s tmp", rootPath);
+        sprintf(command, "cp \"%s\" tmp", rootPath);
         system(command);
         FILE *f = fopen("tmp", "rb");
         fseek(f, 0, SEEK_END);
@@ -147,7 +147,7 @@ int main() {
     SOCKADDR_IN saddr, caddr;
     int clen = sizeof(caddr);
     saddr.sin_family = AF_INET;
-    saddr.sin_port = htons(8889);
+    saddr.sin_port = htons(8888);
     saddr.sin_addr.s_addr = 0;
     if (bind(sfd, (SOCKADDR *) &saddr, sizeof(saddr)) == 0) {
         listen(sfd, 10);
