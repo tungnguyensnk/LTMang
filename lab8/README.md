@@ -1,2 +1,2 @@
 # LTMang
-![image](https://user-images.githubusercontent.com/83415296/206989311-69e7ec47-6b1e-4ef8-95dc-0835bc027380.png)
+![image](https://user-images.githubusercontent.com/83415296/206988821-e34ce40e-88f3-4a52-bb56-84d01fdde5a0.png)

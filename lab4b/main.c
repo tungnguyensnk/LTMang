@@ -8,12 +8,13 @@
 
 typedef struct sockaddr_in SOCKADDR_IN;
 
-char *sendData(int sfd, char *buffer) {
-    int tmp = 0;
+int sendData(int sfd, char *buffer) {
+    int count = 0, bytes;
     do {
-        int byte = send(sfd, buffer + tmp, strlen(buffer) - tmp, 0);
-        tmp += byte;
-    } while (tmp < strlen(buffer));
+        bytes = (int) send(sfd, buffer + count, strlen(buffer) - count, 0);
+        count += bytes;
+    } while (bytes >= 0 && count < strlen(buffer));
+    return count;
 }
 
 char *getPWD(int sfd) {
@@ -21,7 +22,7 @@ char *getPWD(int sfd) {
     buffer = malloc(1024 * sizeof(char));
     memset(buffer, 0, 1024 * sizeof(char));
     sendData(sfd, command);
-    int bytes = recv(sfd, buffer, 1024 * sizeof(char), 0);
+    int bytes = (int) recv(sfd, buffer, 1024 * sizeof(char), 0);
     buffer[bytes - 1] = 0;
     return buffer;
 
@@ -45,12 +46,11 @@ int main() {
     char buffer[1024] = {0};
     recv(sfd, buffer, 1024, 0);
 
-    while (1) {
+    while (0 == 0) {
         printf("#%s#", getPWD(sfd));
         fgets(buffer, 1024, stdin);
         sendData(sfd, buffer);
         recv(sfd, buffer, 1024, 0);
         printf("%s", buffer);
     }
-    close(sfd);
 }
